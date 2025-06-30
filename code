@@ -1,0 +1,175 @@
+# Traffic Prediction using Machine Learning
+
+## Importing the Libraries
+
+import pandas as pd
+import numpy as np
+import matplotlib.pyplot as plt
+
+## Uploading the dataset
+
+2from google.colab import files
+upload=files.upload()
+
+dataset=pd.read_csv("Dataset.csv")
+
+dataset.head()
+
+
+
+## Label Encoding for Date
+
+from sklearn.preprocessing import LabelEncoder
+le = LabelEncoder()
+
+dataset['Date']= le.fit_transform(dataset['Date'])
+
+dataset.tail(10)
+
+dataset.info()
+
+### Assigning the independed variables as X and Target variable as y
+
+X = dataset.iloc[:, 2:6].values
+y = dataset.iloc[:, -1].values
+
+### Handling any missing values
+
+from sklearn.impute import SimpleImputer
+imputer = SimpleImputer(missing_values=np.nan, strategy='mean')
+imputer.fit(X[:, 2:6])
+X[:, 2:6] = imputer.transform(X[:, 2:6])
+
+### Splitting the dataset into the Training set and Test set
+
+from sklearn.model_selection import train_test_split
+X_train, X_test, y_train, y_test = train_test_split(X, y, test_size = 0.20, random_state = 0)
+
+## Using Random Forest Regression
+
+### Training the random forest model on the Training set
+
+from sklearn.ensemble import RandomForestRegressor
+rfRegressor = RandomForestRegressor(n_estimators = 300, random_state = 0)
+rfRegressor.fit(X_train,y_train)
+
+### Predicting the Test set results
+
+y_pred = rfRegressor.predict(X_test)
+# y_pred
+#rounding off the predicted values
+np.set_printoptions(precision=2)
+print(np.concatenate((y_pred.reshape(len(y_pred),1), y_test.reshape(len(y_test),1)),1))
+
+### rounding off the predicted values of Random forest reggresion
+
+if(y_pred.all() < 2.5):
+    y_pred = np.round(y_pred - 0.5)
+else:
+    y_pred = np.round(y_pred + 0.5)
+
+print("using Random Forest Regression")
+rf_error=(y_pred-y_test)/y_test
+rf_error=round(rf_error.mean()*100,2)
+print("Error = ",rf_error,"%")
+rf_accuracy=100-rf_error
+print("Accuracy= ",rf_accuracy,"%")
+
+feature_names = dataset.columns[2:6]
+feature_importances = pd.Series(rfRegressor.feature_importances_, index=feature_names)
+feature_importances = feature_importances.sort_values(ascending=False)
+
+plt.figure(figsize=(10,6))
+feature_importances.plot(kind='bar', color='skyblue')
+plt.title('Random Forest Feature Importances')
+plt.ylabel('Importance Score')
+plt.xlabel('Features')
+plt.tight_layout()
+plt.show()
+
+# Actual vs Predicted plot
+plt.figure(figsize=(8,6))
+plt.scatter(y_test, y_pred, alpha=0.6, color='blue')
+plt.plot([y_test.min(), y_test.max()], [y_test.min(), y_test.max()], '--r', linewidth=2)
+plt.xlabel('Actual Values')
+plt.ylabel('Predicted Values')
+plt.title('Random Forest: Actual vs Predicted')
+plt.tight_layout()
+plt.show()
+
+## Using Support Vector Regression
+
+### feature scaling
+
+from sklearn.preprocessing import StandardScaler
+sc_X = StandardScaler()
+X_train = sc_X.fit_transform(X_train)
+X_test = sc_X.transform(X_test)
+print(X_train)
+
+### Training the SVR model on the Training set
+
+from sklearn.svm import SVR
+svRegressor = SVR(kernel = 'rbf')
+svRegressor.fit(X_train,y_train)
+
+
+
+svr_y_pred = svRegressor.predict(X_test)
+svr_y_pred
+
+if(svr_y_pred.all()<2.5):
+    svr_y_pred=np.round(svr_y_pred-0.5)
+
+else:
+    svr_y_pred=np.round(svr_y_pred+0.5)
+
+svr_y_pred
+
+print("Using Support Vector Regression")
+svr_error=(svr_y_pred-y_test)/y_test
+svr_error=round(svr_error.mean()*100,2)
+print("Error = ",svr_error,"%")
+svr_accuracy=100-svr_error
+print("Accuracy= ",svr_accuracy,"%")
+
+# Actual vs Predicted plot
+plt.figure(figsize=(8,6))
+plt.scatter(y_test, svr_y_pred, alpha=0.6, color='green')
+plt.plot([y_test.min(), y_test.max()], [y_test.min(), y_test.max()], '--r', linewidth=2)
+plt.xlabel('Actual Values')
+plt.ylabel('Predicted Values')
+plt.title('SVR: Actual vs Predicted')
+plt.tight_layout()
+plt.show()
+
+
+def predict_traffic():
+  while(1):
+    print("\n Enter real-time data for prediction:")
+    coded_day = int(input("Coded Day (e.g., Monday=1, Tuesday=2, ...): "))
+    zone = int(input("Zone Number: "))
+    weather = int(input("Weather Code: "))
+    temperature = float(input("Temperature (°C): "))
+
+    # Convert input into numpy array and scale
+    real_time_data = np.array([[coded_day, zone, weather, temperature]])
+    #real_time_data_scaled = sc_X.transform(real_time_data)
+
+    # Predict using Random Forest
+    rf_prediction = rfRegressor.predict(real_time_data)
+   #rf_prediction = np.round(rf_prediction)
+
+    # Predict using SVR
+
+
+    print("\n### Prediction Results ###")
+    print(f"Random Forest Predicted Traffic Level: {rf_prediction[0]}")
+    cont=input("Do you wish to continue predicting (y or n)")
+    if(cont=='n'):
+      break
+
+
+
+# Call function for real-time prediction
+predict_traffic()
